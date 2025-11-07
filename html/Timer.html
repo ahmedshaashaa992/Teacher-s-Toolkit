@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Modern Timer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #000;
+      color: #fff;
+      text-align: center;
+      padding: 40px;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 48px;
+      color: #e9bd2c; /* Bold red */
+      margin-bottom: 10px;
+    }
+
+    #timer {
+      font-size: 72px;
+      margin: 30px 0;
+      color: #ffffff;
+      font-weight: bold;
+    }
+
+    input {
+      font-size: 22px;
+      padding: 12px 20px;
+      border: 2px solid #e9bd2c;
+      border-radius: 8px;
+      background-color: #111;
+      color: #fff;
+      text-align: center;
+      width: 240px;
+    }
+
+    button {
+      margin: 10px;
+      padding: 14px 28px;
+      font-size: 16px;
+      font-weight: bold;
+      background-color: #e9bd2c;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #886800;
+    }
+
+    #controls {
+      margin-bottom: 20px;
+    }
+    #bgCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -1;
+      background: #000;
+    }
+    .signature {
+      margin-top: 30px;
+      font-style: italic;
+      color: #666;
+    }
+    select {
+      font-size: 22px;
+      padding: 12px 20px;
+      border: 2px solid #e9bd2c;
+      border-radius: 8px;
+      background-color: #111;
+      color: #fff;
+      text-align: center;
+      width: 240px;
+      margin-bottom: 15px;
+    }
+    .music-control {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color:#e9bd2c;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    .music-control:hover {
+      background-color: #886800;
+      transform: scale(1.1);
+    }
+    .music-control i {
+      color: white;
+      font-size: 20px;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<canvas id="bgCanvas"></canvas>
+
+<body>
+  <h1>Min-Timer</h1>
+  <h2 id="timer">00:00</h2>
+
+  <div id="controls">
+    <select id="timeSelect">
+      <option value="">Custom time</option>
+      <option value="300">5 minutes</option>
+      <option value="600">10 minutes</option>
+      <option value="900">15 minutes</option>
+      <option value="1200">20 minutes</option>
+      <option value="1500">25 minutes</option>
+      <option value="1800">30 minutes</option>
+      <option value="2700">45 minutes</option>
+      <option value="3600">60 minutes</option>
+    </select>
+    <br />
+    <input type="text" id="timerInput" placeholder="Enter MM or MM:SS" />
+    <br />
+  </div>
+
+  <button onclick="startTimer()">Start</button>
+  <button onclick="pauseTimer()">Pause</button>
+  <button onclick="resetTimer()">Reset</button>
+  <div>
+    <button onclick="toggleFullScreen()">Fullscreen</button>
+  </div>
+  
+  <div class="signature">Created by Ahmed Shaashaa</div>
+  
+  <!-- Music control -->
+  <div class="music-control" id="musicControl" title="Background music">
+    <i class="fas fa-music"></i>
+  </div>
+  
+  <!-- Audio element for the relaxing song -->
+  <audio id="backgroundMusic" loop>
+    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-17.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+  
+  <script>
+    // Music control
+    const backgroundMusic = document.getElementById('backgroundMusic');
+    const musicControl = document.getElementById('musicControl');
+    let isMusicPlaying = false;
+    
+    // Set volume to 30% to be relaxing and not intrusive
+    backgroundMusic.volume = 0.3;
+    
+    musicControl.addEventListener('click', function() {
+      if (isMusicPlaying) {
+        backgroundMusic.pause();
+        musicControl.innerHTML = '<i class="fas fa-music"></i>';
+      } else {
+        backgroundMusic.play();
+        musicControl.innerHTML = '<i class="fas fa-pause"></i>';
+      }
+      isMusicPlaying = !isMusicPlaying;
+    });
+    
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch((err) => {
+          alert(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+    
+    const timerDisplay = document.getElementById('timer');
+    let totalTimeSec = 0;
+    let interval = null;
+    let isPaused = false;
+
+    function updateDisplay(minutes, secs) {
+      const mins = String(minutes).padStart(2, '0');
+      const sec = String(secs).padStart(2, '0');
+      timerDisplay.textContent = `${mins}:${sec}`;
+
+      if (interval || isPaused) {
+        const input = document.getElementById('timerInput');
+        input.value = `${mins}:${sec}`;
+      }
+    }
+
+    function counter() {
+      // Start playing music when timer starts (if not already playing)
+      if (!isMusicPlaying && backgroundMusic.paused) {
+        backgroundMusic.play();
+        musicControl.innerHTML = '<i class="fas fa-pause"></i>';
+        isMusicPlaying = true;
+      }
+      
+      interval = setInterval(() => {
+        const min = Math.floor(totalTimeSec / 60);
+        const sec = totalTimeSec % 60;
+
+        updateDisplay(min, sec);
+        totalTimeSec--;
+
+        if (totalTimeSec < 0) {
+          clearInterval(interval);
+          interval = null;
+          isPaused = false;
+          document.getElementById('controls').style.display = "block";
+          document.getElementById('timerInput').disabled = false;
+          
+          // Pause music when timer completes
+          if (isMusicPlaying) {
+            backgroundMusic.pause();
+            musicControl.innerHTML = '<i class="fas fa-music"></i>';
+            isMusicPlaying = false;
+          }
+        }
+      }, 1000);
+    }
+
+    function startTimer() {
+      if (!interval) {
+        const input = document.getElementById('timerInput');
+        const timeSelect = document.getElementById('timeSelect');
+        
+        if (!isPaused) {
+          if (timeSelect.value) {
+            totalTimeSec = parseInt(timeSelect.value);
+          } else {
+            let value = input.value.trim();
+            if (value.includes(':')) {
+              const [m, s] = value.split(':').map(Number);
+              totalTimeSec = m * 60 + (s || 0);
+            } else {
+              totalTimeSec = parseInt(value) * 60;
+            }
+          }
+
+          document.getElementById('controls').style.display = "none";
+        }
+
+        input.disabled = true;
+        timeSelect.disabled = true;
+        counter();
+      }
+    }
+
+    function pauseTimer() {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+        isPaused = true;
+        document.getElementById('controls').style.display = "block";
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(interval);
+      interval = null;
+      isPaused = false;
+      totalTimeSec = 0;
+      updateDisplay(0, 0);
+      const input = document.getElementById('timerInput');
+      const timeSelect = document.getElementById('timeSelect');
+      input.disabled = false;
+      timeSelect.disabled = false;
+      input.value = '';
+      timeSelect.value = '';
+      document.getElementById('controls').style.display = "block";
+      
+      // Pause music when resetting
+      if (isMusicPlaying) {
+        backgroundMusic.pause();
+        musicControl.innerHTML = '<i class="fas fa-music"></i>';
+        isMusicPlaying = false;
+      }
+    }
+
+    document.getElementById('timeSelect').addEventListener('change', function() {
+      if (this.value) {
+        document.getElementById('timerInput').value = '';
+        totalTimeSec = parseInt(this.value);
+        const min = Math.floor(totalTimeSec / 60);
+        const sec = totalTimeSec % 60;
+        updateDisplay(min, sec);
+      }
+    });
+
+    // Initial state
+    updateDisplay(0, 0);
+  </script>
+  <script>
+  // Simple red circle trail effect
+  const trailCount = 10;
+  const trail = [];
+
+  for (let i = 0; i < trailCount; i++) {
+    const dot = document.createElement('div');
+    dot.style.position = 'fixed';
+    dot.style.width = '10px';
+    dot.style.height = '10px';
+    dot.style.borderRadius = '50%';
+    dot.style.background = '#e9bd2c';
+    dot.style.pointerEvents = 'none';
+    dot.style.opacity = '0.6';
+    dot.style.zIndex = '9999';
+    document.body.appendChild(dot);
+    trail.push(dot);
+  }
+
+  let mouse = { x: 0, y: 0 };
+
+  window.addEventListener('mousemove', e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  function animateTrail() {
+    for (let i = trail.length - 1; i > 0; i--) {
+      trail[i].style.left = trail[i - 1].style.left;
+      trail[i].style.top = trail[i - 1].style.top;
+    }
+
+    trail[0].style.left = mouse.x + 'px';
+    trail[0].style.top = mouse.y + 'px';
+
+    requestAnimationFrame(animateTrail);
+  }
+
+  animateTrail();
+</script>
+<script>
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+
+  let width, height;
+  function resizeCanvas() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  const particles = [];
+  const particleCount = 80;
+
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      radius: Math.random() * 2 + 1,
+      dx: (Math.random() - 0.5) * 0.5,
+      dy: (Math.random() - 0.5) * 0.5,
+      alpha: Math.random() * 0.6 + 0.3
+    });
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+    for (let p of particles) {
+      p.x += p.dx;
+      p.y += p.dy;
+
+      if (p.x < 0 || p.x > width) p.dx *= -1;
+      if (p.y < 0 || p.y > height) p.dy *= -1;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 59, 63, ${p.alpha})`; // red glow
+      ctx.fill();
+    }
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+</script>
+
+</body>
+</html>

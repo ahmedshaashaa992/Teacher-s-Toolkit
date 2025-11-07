@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Generator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #e9bd2c;
+      --secondary: #030303;
+      --success: #2ecc71;
+      --danger: #e74c3c;
+      --warning: #f39c12;
+      --light: #ecf0f1;
+      --dark: #1b2025;
+      --gray: #7f8c8d;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0d0d0e 0%, #2c3e50 100%);
+      color: var(--dark);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+    
+    header {
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      color: white;
+      padding: 25px;
+      text-align: center;
+    }
+    
+    header h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+    }
+    
+    header p {
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+    
+    .form-container {
+      padding: 25px;
+    }
+    
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background-color: var(--light);
+      border-radius: 8px;
+    }
+    
+    .section-title {
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    
+    input, textarea, select {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid #bdc3c7;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+    
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    
+    .help-text {
+      font-size: 0.85rem;
+      color: var(--gray);
+      margin-top: 5px;
+    }
+    
+    .instruction-box {
+      background-color: #fff;
+      border-left: 4px solid var(--primary);
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    
+    .instruction-box h4 {
+      margin-bottom: 10px;
+      color: var(--primary);
+    }
+    
+    .instruction-box ol {
+      margin-left: 20px;
+    }
+    
+    .instruction-box li {
+      margin-bottom: 8px;
+    }
+    
+    .btn {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 600;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+      background-color: var(--light);
+      color: var(--dark);
+    }
+    
+    .btn-secondary:hover {
+      background-color: #dfe6e9;
+    }
+    
+    .btn-full {
+      width: 100%;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 15px;
+      margin-top: 30px;
+    }
+    
+    .preview-container {
+      display: none;
+      padding: 25px;
+    }
+    
+    .json-preview {
+      background-color: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+    
+    .notification {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 15px 25px;
+      border-radius: 8px;
+      background-color: var(--success);
+      color: white;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    
+    .notification.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    .notification i {
+      margin-right: 10px;
+      font-size: 1.2rem;
+    }
+    
+    .notification.error {
+      background-color: var(--danger);
+    }
+    
+    @media (max-width: 768px) {
+      .actions {
+        flex-direction: column;
+      }
+      
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Exam Generator</h1>
+      <p>Create custom online exams with monitoring features</p>
+    </header>
+    
+    <div class="form-container" id="form-container">
+      <div class="section">
+        <h2 class="section-title"><i class="fas fa-info-circle"></i> Exam Details</h2>
+        
+        <div class="form-group">
+          <label for="examTitle">Exam Title</label>
+          <input type="text" id="examTitle" placeholder="e.g., Web Development Concepts Exam">
+        </div>
+        
+        <div class="form-group">
+          <label for="examDescription">Exam Description</label>
+          <textarea id="examDescription" placeholder="Brief description of the exam"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="examDuration">Exam Duration (minutes)</label>
+          <input type="number" id="examDuration" value="60" min="1">
+        </div>
+        
+        <div class="form-group">
+          <label for="passingScore">Passing Score (out of 100)</label>
+          <input type="number" id="passingScore" value="70" min="0" max="100">
+        </div>
+        
+        <div class="form-group">
+          <label for="maxSwitches">Maximum Allowed Tab Switches</label>
+          <input type="number" id="maxSwitches" value="2" min="0">
+          <div class="help-text">Set to 0 to disable tab switch detection</div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title"><i class="fas fa-question-circle"></i> Questions</h2>
+        
+        <div class="form-group">
+          <label for="questionsFile">Upload Questions (JSON file)</label>
+          <input type="file" id="questionsFile" accept=".json">
+          <div class="help-text">Upload a JSON file containing your exam questions</div>
+        </div>
+        
+        <div class="instruction-box">
+          <h4>How to format your questions JSON file:</h4>
+          <p>Your JSON file should contain an array of question objects with the following structure:</p>
+          <pre>
+[
+  {
+    "topic": "axios",
+    "text": "Axios is a promise-based HTTP client for the browser and Node.js.",
+    "answer": "true"
+  },
+  {
+    "topic": "http",
+    "text": "The GET method should be used for submitting form data.",
+    "answer": "false"
+  }
+]
+          </pre>
+          <p>Where:</p>
+          <ul>
+            <li><strong>topic</strong>: Category of the question (e.g., axios, http, redux)</li>
+            <li><strong>text</strong>: The question text</li>
+            <li><strong>answer</strong>: The correct answer ("true" or "false")</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title"><i class="fab fa-telegram"></i> Telegram Configuration</h2>
+        
+        <div class="form-group">
+          <label for="botToken">Bot Token</label>
+          <input type="text" id="botToken" placeholder="e.g., 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ">
+          <div class="help-text">The token for your Telegram bot</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="chatId">Chat ID</label>
+          <input type="text" id="chatId" placeholder="e.g., 123456789">
+          <div class="help-text">Your Telegram chat ID where results will be sent</div>
+        </div>
+        
+        <div class="instruction-box">
+          <h4>How to get your Telegram Bot Token and Chat ID:</h4>
+          <ol>
+            <li>Open Telegram and search for @BotFather</li>
+            <li>Start a chat with BotFather and send the command <code>/newbot</code></li>
+            <li>Follow the instructions to create your bot</li>
+            <li>Once created, BotFather will give you a token for your bot</li>
+            <li>To get your Chat ID, send a message to your new bot</li>
+            <li>Visit <code>https://api.telegram.org/botYOUR_BOT_TOKEN/getUpdates</code> (replace YOUR_BOT_TOKEN with your actual token)</li>
+            <li>Find the "chat" object in the response and copy the "id" value</li>
+          </ol>
+        </div>
+      </div>
+      
+      <div class="actions">
+        <button class="btn btn-secondary" id="preview-btn">Preview Configuration</button>
+        <button class="btn btn-primary" id="generate-btn">Generate Exam</button>
+      </div>
+    </div>
+    
+    <div class="preview-container" id="preview-container">
+      <h2 class="section-title"><i class="fas fa-eye"></i> Configuration Preview</h2>
+      
+      <div class="json-preview" id="config-preview">
+        {/* Preview will be generated here */}
+      </div>
+      
+      <div class="actions" style="margin-top: 20px;">
+        <button class="btn btn-secondary" id="back-btn">Back to Editing</button>
+        <button class="btn btn-primary" id="download-btn">Download Exam File</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="notification" id="notification">
+    <i class="fas fa-check-circle"></i>
+    <span id="notification-text">Exam generated successfully!</span>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // DOM Elements
+      const formContainer = document.getElementById('form-container');
+      const previewContainer = document.getElementById('preview-container');
+      const configPreview = document.getElementById('config-preview');
+      const previewBtn = document.getElementById('preview-btn');
+      const backBtn = document.getElementById('back-btn');
+      const generateBtn = document.getElementById('generate-btn');
+      const downloadBtn = document.getElementById('download-btn');
+      const notification = document.getElementById('notification');
+      const notificationText = document.getElementById('notification-text');
+      
+      // Form inputs
+      const examTitle = document.getElementById('examTitle');
+      const examDescription = document.getElementById('examDescription');
+      const examDuration = document.getElementById('examDuration');
+      const passingScore = document.getElementById('passingScore');
+      const maxSwitches = document.getElementById('maxSwitches');
+      const questionsFile = document.getElementById('questionsFile');
+      const botToken = document.getElementById('botToken');
+      const chatId = document.getElementById('chatId');
+      
+      let questionsData = [];
+      
+      // Handle file upload
+      questionsFile.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            questionsData = JSON.parse(e.target.result);
+            showNotification('Questions loaded successfully!', 'success');
+          } catch (error) {
+            showNotification('Error parsing JSON file. Please check the format.', 'error');
+            console.error('Error parsing JSON:', error);
+          }
+        };
+        reader.readAsText(file);
+      });
+      
+      // Preview configuration
+      previewBtn.addEventListener('click', function() {
+        const config = getConfigObject();
+        configPreview.textContent = JSON.stringify(config, null, 2);
+        formContainer.style.display = 'none';
+        previewContainer.style.display = 'block';
+      });
+      
+      // Back to editing
+      backBtn.addEventListener('click', function() {
+        previewContainer.style.display = 'none';
+        formContainer.style.display = 'block';
+      });
+      
+      // Generate exam
+      generateBtn.addEventListener('click', function() {
+        if (!validateForm()) return;
+        
+        generateExamFile();
+      });
+      
+      // Download exam file
+      downloadBtn.addEventListener('click', function() {
+        if (!validateForm()) return;
+        
+        generateExamFile();
+      });
+      
+      // Get configuration object from form inputs
+      function getConfigObject() {
+        return {
+          examTitle: examTitle.value,
+          examDescription: examDescription.value,
+          examDuration: parseInt(examDuration.value),
+          passingScore: parseInt(passingScore.value),
+          maxSwitches: parseInt(maxSwitches.value),
+          questions: questionsData,
+          botToken: botToken.value,
+          chatId: chatId.value
+        };
+      }
+      
+      // Validate form inputs
+      function validateForm() {
+        if (!examTitle.value.trim()) {
+          showNotification('Please enter an exam title', 'error');
+          return false;
+        }
+        
+        if (questionsData.length === 0) {
+          showNotification('Please upload questions', 'error');
+          return false;
+        }
+        
+        if (!botToken.value.trim()) {
+          showNotification('Please enter a Telegram bot token', 'error');
+          return false;
+        }
+        
+        if (!chatId.value.trim()) {
+          showNotification('Please enter a Telegram chat ID', 'error');
+          return false;
+        }
+        
+        return true;
+      }
+      
+      // Generate the exam HTML file
+      function generateExamFile() {
+        const config = getConfigObject();
+        
+        // Calculate points per question to ensure total score is 100
+        const pointsPerQuestion = 100 / config.questions.length;
+        
+        // Create the exam HTML content
+        var examHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${config.examTitle}</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #3498db;
+      --secondary: #2c3e50;
+      --success: #2ecc71;
+      --danger: #e74c3c;
+      --warning: #f39c12;
+      --light: #ecf0f1;
+      --dark: #2c3e50;
+      --gray: #7f8c8d;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+      color: var(--dark);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      width: 100%;
+      min-height: 100vh;
+      margin: 0;
+      background: white;
+      border-radius: 0;
+      box-shadow: none;
+      overflow: auto;
+    }
+    
+    header {
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      color: white;
+      padding: 25px;
+      text-align: center;
+    }
+    
+    header h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+    }
+    
+    header p {
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+    
+    .exam-info {
+      background-color: var(--light);
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #bdc3c7;
+    }
+    
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .info-item i {
+      color: var(--primary);
+    }
+    
+    .quiz-container {
+      padding: 25px;
+    }
+    
+    .student-info {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 25px;
+      align-items: center;
+    }
+    
+    .student-info input {
+      flex: 1;
+      padding: 12px 15px;
+      border: 1px solid #bdc3c8;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    
+    .progress-container {
+      margin-bottom: 20px;
+    }
+    
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      color: var(--gray);
+    }
+    
+    .progress-bar {
+      height: 10px;
+      background-color: var(--light);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    
+    .progress {
+      height: 100%;
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      border-radius: 5px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    .question {
+      background-color: var(--light);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+    
+    .question-number {
+      color: var(--primary);
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    
+    .options {
+      margin-bottom: 25px;
+    }
+    
+    .option {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      margin-bottom: 10px;
+      background-color: white;
+      border: 1px solid #bdc3c7;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .option:hover {
+      border-color: var(--primary);
+      background-color: rgba(52, 152, 219, 0.05);
+    }
+    
+    .option input {
+      margin-right: 15px;
+    }
+    
+    .quiz-controls {
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .btn {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 600;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+      background-color: var(--light);
+      color: var(--dark);
+    }
+    
+    .btn-secondary:hover {
+      background-color: #dfe6e9;
+    }
+    
+    .result-container {
+      text-align: center;
+      padding: 30px;
+      display: none;
+    }
+    
+    .score-display {
+      font-size: 3rem;
+      font-weight: bold;
+      color: var(--primary);
+      margin: 20px 0;
+    }
+    
+    .score-text {
+      font-size: 1.2rem;
+      margin-bottom: 25px;
+    }
+    
+    .pass {
+      color: var(--success);
+    }
+    
+    .fail {
+      color: var(--danger);
+    }
+    
+    .notification {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      padding: 15px 25px;
+      border-radius: 8px;
+      background-color: var(--dark);
+      color: white;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    
+    .notification.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    .notification i {
+      margin-right: 10px;
+      font-size: 1.2rem;
+    }
+    
+    .warning {
+      background-color: #fff3cd;
+      color: #856404;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid var(--warning);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .warning i {
+      color: var(--warning);
+    }
+    
+    .timer-container {
+      background-color: var(--light);
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .timer-warning {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    
+    .timer-danger {
+      background-color: #f8d7da;
+      color: #721c24;
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+    
+    .exam-ended {
+      text-align: center;
+      padding: 30px;
+      background-color: var(--light);
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .blocked-page {
+      text-align: center;
+      padding: 40px;
+    }
+    
+    .blocked-page i {
+      font-size: 4rem;
+      color: var(--danger);
+      margin-bottom: 20px;
+    }
+    
+    .switch-warning {
+      background-color: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid var(--danger);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .switch-warning i {
+      color: var(--danger);
+    }
+    
+    @media (max-width: 768px) {
+      .student-info {
+        flex-direction: column;
+        gap: 10px;
+      }
+      
+      .exam-info {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      
+      .quiz-controls {
+        flex-direction: column;
+        gap: 10px;
+      }
+      
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>${config.examTitle}</h1>
+      <p>${config.examDescription}</p>
+    </header>
+    
+    <div class="exam-info">
+      <div class="info-item">
+        <i class="fas fa-clock"></i>
+        <span>Time: ${config.examDuration} minutes</span>
+      </div>
+      <div class="info-item">
+        <i class="fas fa-question-circle"></i>
+        <span>${config.questions.length} Questions</span>
+      </div>
+      <div class="info-item">
+        <i class="fas fa-graduation-cap"></i>
+        <span>Passing Score: ${config.passingScore}/100</span>
+      </div>
+    </div>
+    
+    <div class="quiz-container" id="quiz-container">
+      <div class="warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>This exam can only be taken once. Make sure you're ready before starting.</span>
+      </div>
+      
+      <div id="switch-warning" class="switch-warning" style="display: none;">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="switch-warning-text">Warning: You have switched tabs 1 time. After ${config.maxSwitches} switches, your exam will be automatically submitted.</span>
+      </div>
+      
+      <div class="timer-container" id="timer-container">
+        <i class="fas fa-clock"></i>
+        <span id="timer">${config.examDuration.toString().padStart(2, '0')}:00</span>
+      </div>
+      
+      <div class="student-info">
+        <input type="text" id="studentName" placeholder="Enter your full name" required>
+      </div>
+      
+      <div class="progress-container">
+        <div class="progress-info">
+          <span id="progress-text">Question 1 of ${config.questions.length}</span>
+          <span id="score-text">Score: 0/100</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress" id="progress"></div>
+        </div>
+      </div>
+      
+      <div id="questions-container">
+        <!-- Questions will be inserted here by JavaScript -->
+      </div>
+      
+      <div class="quiz-controls">
+        <button class="btn btn-secondary" id="prev-btn">Previous</button>
+        <button class="btn btn-primary" id="submit-btn">Submit Exam</button>
+      </div>
+    </div>
+    
+    <div class="result-container" id="result-container">
+      <h2>Exam Completed!</h2>
+      <div class="score-display" id="score">0/100</div>
+      <p class="score-text" id="result-text">Your result will be displayed here</p>
+    </div>
+  </div>
+  
+  <div class="notification" id="notification">
+    <i class="fas fa-check-circle"></i>
+    <span>Your answers have been submitted successfully!</span>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Fullscreen helper: request fullscreen when exam starts
+      function openFullscreen() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen();
+        } else if (elem.mozRequestFullScreen) { // Firefox
+          elem.mozRequestFullScreen();
+        } else if (elem.webkitRequestFullscreen) { // Chrome, Safari, Opera
+          elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) { // IE/Edge
+          elem.msRequestFullscreen();
+        }
+      }
+
+      // Detect exit from fullscreen (cross-browser events)
+      function onFullscreenChange() {
+        const fsElement = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+        if (!fsElement) {
+          const name = (document.getElementById('studentName') && document.getElementById('studentName').value.trim()) || 'Unknown';
+          // send a telegram message and warn student
+          fetch('https://api.telegram.org/bot' +' ${config.botToken}' + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: ${config.chatId},
+              text: '⚠️ ' + name + ' exited fullscreen mode during the exam.'
+            })
+          }).catch(()=>{});
+          alert('⚠️ You must stay in fullscreen during the exam!');
+        }
+      }
+      document.addEventListener('fullscreenchange', onFullscreenChange);
+      document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+      document.addEventListener('mozfullscreenchange', onFullscreenChange);
+      document.addEventListener('MSFullscreenChange', onFullscreenChange);
+
+      // Telegram configuration
+      const BOT_TOKEN = "${config.botToken}";
+      const CHAT_ID = "${config.chatId}";
+      
+      // DOM Elements
+      const studentNameInput = document.getElementById('studentName');
+      const progressText = document.getElementById('progress-text');
+      const scoreText = document.getElementById('score-text');
+      const progressBar = document.getElementById('progress');
+      const questionsContainer = document.getElementById('questions-container');
+      const prevBtn = document.getElementById('prev-btn');
+      const submitBtn = document.getElementById('submit-btn');
+      const resultContainer = document.getElementById('result-container');
+      const scoreElement = document.getElementById('score');
+      const resultTextElement = document.getElementById('result-text');
+      const notification = document.getElementById('notification');
+      const timerContainer = document.getElementById('timer-container');
+      const timerElement = document.getElementById('timer');
+      const quizContainer = document.getElementById('quiz-container');
+      const switchWarning = document.getElementById('switch-warning');
+      const switchWarningText = document.getElementById('switch-warning-text');
+      
+      // Exam duration in milliseconds
+      const EXAM_DURATION = ${config.examDuration} * 60 * 1000;
+      
+      // Tab switch tracking
+      let tabSwitchCount = 0;
+      const MAX_SWITCHES = ${config.maxSwitches};
+      let cooldownActive = false;
+      const COOLDOWN_DURATION = 2000; // 2 seconds cooldown
+      
+      // Check if exam has already been completed
+      const examCompleted = localStorage.getItem('examCompleted');
+      if (examCompleted === 'true') {
+        showExamEndedMessage();
+        return;
+      }
+      
+      // Check if timer is already running
+      let examStartTime = localStorage.getItem('examStartTime');
+      let timeLeft = EXAM_DURATION;
+      let timerInterval;
+      
+      if (examStartTime) {
+        // Calculate remaining time
+        const elapsedTime = Date.now() - parseInt(examStartTime);
+        timeLeft = EXAM_DURATION - elapsedTime;
+        
+        if (timeLeft <= 0) {
+          // Exam time has expired
+          localStorage.setItem('examCompleted', 'true');
+          showExamEndedMessage();
+          return;
+        }
+      } else {
+        // Start new exam timer
+        examStartTime = Date.now();
+        localStorage.setItem('examStartTime', examStartTime);
+      }
+      
+      // Exam questions
+      const questions = ${JSON.stringify(config.questions)};
+      
+      // Points per question to ensure total score is 100
+      const POINTS_PER_QUESTION = ${pointsPerQuestion};
+      
+      // Quiz state
+      let currentQuestionIndex = 0;
+      let score = 0;
+      let userAnswers = new Array(questions.length).fill(null);
+      
+      // Initialize exam
+      function initExam() {
+        // Request fullscreen when the exam starts
+        try { openFullscreen(); } catch(e) { /* ignore */ }
+
+        // Load saved answers if they exist
+        const savedAnswers = localStorage.getItem('examAnswers');
+        if (savedAnswers) {
+          userAnswers = JSON.parse(savedAnswers);
+        }
+        
+        // Load saved score if it exists
+        const savedScore = localStorage.getItem('examScore');
+        if (savedScore) {
+          score = parseInt(savedScore);
+        }
+        
+        currentQuestionIndex = 0;
+        
+        updateProgress();
+        displayQuestions();
+        startTimer();
+        
+        // Show quiz container, hide result container
+        quizContainer.style.display = 'block';
+        resultContainer.style.display = 'none';
+      }
+      
+      // Display all questions
+      function displayQuestions() {
+        questionsContainer.innerHTML = '';
+        
+        questions.forEach((question, index) => {
+          const questionElement = document.createElement('div');
+          questionElement.className = 'question';
+          questionElement.innerHTML = '<div class="question-number">Question ' + (index + 1) + ':</div><div>' + question.text + '</div><div class="options"><label class="option"><input type="radio" name="q' + index + '" value="true"> True</label><label class="option"><input type="radio" name="q' + index + '" value="false"> False</label></div>';
+          questionsContainer.appendChild(questionElement);
+          
+          // Check if user has already answered this question
+          if (userAnswers[index] !== null) {
+            const el = document.querySelector('input[name="q' + index + '"][value="' + userAnswers[index] + '"]');
+            if (el) el.checked = true;
+          }
+        });
+        
+        // Update buttons
+        prevBtn.style.display = 'none';
+        submitBtn.textContent = 'Submit Exam';
+      }
+      
+      // Update progress bar and text
+      function updateProgress() {
+        const answeredCount = userAnswers.filter(answer => answer !== null).length;
+        const progressPercentage = (answeredCount / questions.length) * 100;
+        progressBar.style.width = progressPercentage + '%';
+        progressText.textContent = 'Answered: ' + answeredCount + '/' + questions.length;
+        scoreText.textContent = 'Score: ' + score.toFixed(1) + '/100';
+      }
+      
+      // Start the countdown timer
+      function startTimer() {
+        clearInterval(timerInterval);
+        
+        // Update timer immediately
+        updateTimerDisplay();
+        
+        timerInterval = setInterval(() => {
+          timeLeft -= 1000;
+          
+          if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            localStorage.setItem('examCompleted', 'true');
+            localStorage.removeItem('examStartTime');
+            localStorage.removeItem('examAnswers');
+            localStorage.removeItem('examScore');
+            autoSubmitExam();
+            return;
+          }
+          
+          // Update timer display
+          updateTimerDisplay();
+        }, 1000);
+      }
+      
+      // Update timer display
+      function updateTimerDisplay() {
+        const minutes = Math.floor(timeLeft / 60000);
+        const seconds = Math.floor((timeLeft % 60000) / 1000);
+        timerElement.textContent = minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0');
+        
+        // Change color when time is running out
+        if (timeLeft <= 300000) { // 5 minutes
+          timerContainer.classList.add('timer-danger');
+          timerContainer.classList.remove('timer-warning');
+        } else if (timeLeft <= 600000) { // 10 minutes
+          timerContainer.classList.add('timer-warning');
+          timerContainer.classList.remove('timer-danger');
+        } else {
+          timerContainer.classList.remove('timer-warning', 'timer-danger');
+        }
+      }
+      
+      // Auto submit exam when time is up
+      function autoSubmitExam() {
+        clearInterval(timerInterval);
+        calculateScore();
+        showResults();
+        
+        // Show time up message
+        const notification = document.createElement('div');
+        notification.className = 'exam-ended';
+        notification.innerHTML = '<h3>Time is up!</h3><p>Your exam has been automatically submitted.</p>';
+        quizContainer.prepend(notification);
+      }
+      
+      // Calculate final score
+      function calculateScore() {
+        score = 0;
+        
+        questions.forEach((question, index) => {
+          if (userAnswers[index] === question.answer) {
+            score += POINTS_PER_QUESTION;
+          }
+        });
+        
+        // Round to 1 decimal place
+        score = Math.round(score * 10) / 10;
+      }
+      
+      // Show results
+      function showResults() {
+        quizContainer.style.display = 'none';
+        resultContainer.style.display = 'block';
+        
+        scoreElement.textContent = score + '/100';
+        
+        if (score >= ${config.passingScore}) {
+          resultTextElement.textContent = 'Congratulations! You passed the exam.';
+          resultTextElement.className = 'score-text pass';
+        } else {
+          resultTextElement.textContent = 'Sorry, you did not pass the exam. Please try again.';
+          resultTextElement.className = 'score-text fail';
+        }
+        
+        // Send results to Telegram
+        const name = studentNameInput.value.trim() || 'Unknown';
+        sendResultsToTelegram(name, score);
+        
+        // Clear saved data
+        localStorage.removeItem('examStartTime');
+        localStorage.removeItem('examAnswers');
+        localStorage.removeItem('examScore');
+        localStorage.setItem('examCompleted', 'true');
+      }
+      
+      // Send results to Telegram
+      function sendResultsToTelegram(name, score) {
+        const message = '📝 Exam Results for ' + name + ': Score: ' + score + '/100 Status: ' + (score >= ${config.passingScore} ? 'PASSED ✅' : 'FAILED ❌') + ' Exam: ${config.examTitle}';
+        
+        fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            chat_id: CHAT_ID,
+            text: message
+          })
+        }).catch(error => {
+          console.error('Error sending results to Telegram:', error);
+        });
+      }
+      
+      // Show exam ended message
+      function showExamEndedMessage() {
+        quizContainer.style.display = 'none';
+        resultContainer.style.display = 'none';
+        
+        const examEndedDiv = document.createElement('div');
+        examEndedDiv.className = 'exam-ended';
+        examEndedDiv.innerHTML = '<h2><i class="fas fa-exclamation-circle"></i> Exam Already Completed</h2><p>This exam can only be taken once. You have already completed it.</p>';
+        
+        document.querySelector('.container').appendChild(examEndedDiv);
+      }
+      
+      // Show notification
+      function showNotification() {
+        notification.classList.add('show');
+        setTimeout(() => {
+          notification.classList.remove('show');
+        }, 3000);
+      }
+      
+      // Tab switch detection
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && !cooldownActive) {
+          tabSwitchCount++;
+          
+          if (tabSwitchCount > MAX_SWITCHES) {
+            // Auto submit exam if max switches exceeded
+            localStorage.setItem('examCompleted', 'true');
+            localStorage.removeItem('examStartTime');
+            localStorage.removeItem('examAnswers');
+            localStorage.removeItem('examScore');
+            autoSubmitExam();
+            
+            // Show warning
+            const warning = document.createElement('div');
+            warning.className = 'exam-ended';
+            warning.innerHTML = '<h3>Too many tab switches!</h3><p>Your exam has been automatically submitted.</p>';
+            quizContainer.prepend(warning);
+          } else {
+            // Show warning
+            switchWarning.style.display = 'flex';
+            switchWarningText.textContent = 'Warning: You have switched tabs ' + tabSwitchCount + ' time' + (tabSwitchCount === 1 ? '' : 's') + '. After ' + MAX_SWITCHES + ' switches, your exam will be automatically submitted.';
+            
+            // Send notification to Telegram
+            const name = studentNameInput.value.trim() || 'Unknown';
+            fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: CHAT_ID,
+                text: '⚠️ ' + name + ' switched tabs during the exam (' + tabSwitchCount + '/' + MAX_SWITCHES + ').'
+              })
+            }).catch(()=>{});
+            
+            // Set cooldown to prevent multiple detections
+            cooldownActive = true;
+            setTimeout(() => {
+              cooldownActive = false;
+            }, COOLDOWN_DURATION);
+          }
+        }
+      });
+      
+      // Event listeners
+      prevBtn.addEventListener('click', () => {
+        if (currentQuestionIndex > 0) {
+          currentQuestionIndex--;
+          updateProgress();
+        }
+      });
+      
+      submitBtn.addEventListener('click', () => {
+        // Save current answer
+        const selectedOption = document.querySelector('input[name="q' + currentQuestionIndex + '"]:checked');
+        if (selectedOption) {
+          userAnswers[currentQuestionIndex] = selectedOption.value;
+          localStorage.setItem('examAnswers', JSON.stringify(userAnswers));
+        }
+        
+        // Calculate score
+        calculateScore();
+        localStorage.setItem('examScore', score);
+        
+        // Show results
+        showResults();
+        showNotification();
+      });
+      
+      // Save answers when user selects an option
+      questionsContainer.addEventListener('change', (e) => {
+        if (e.target.type === 'radio') {
+          const questionIndex = parseInt(e.target.name.substring(1));
+          userAnswers[questionIndex] = e.target.value;
+          localStorage.setItem('examAnswers', JSON.stringify(userAnswers));
+          updateProgress();
+        }
+      });
+      
+      // Initialize exam
+      initExam();
+    });
+  </replaced>
+</body>
+</html>`;
+        
+        // Create a Blob and download the file
+        examHtml=examHtml.replace(`replaced`, `script`);
+        const blob = new Blob([examHtml], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${config.examTitle.replace(/\s+/g, '_')}_Exam.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showNotification('Exam file generated successfully!', 'success');
+      }
+      
+      // Show notification
+      function showNotification(message, type = 'success') {
+        notificationText.textContent = message;
+        notification.className = 'notification';
+        
+        if (type === 'error') {
+          notification.classList.add('error');
+          notification.querySelector('i').className = 'fas fa-exclamation-circle';
+        } else {
+          notification.querySelector('i').className = 'fas fa-check-circle';
+        }
+        
+        notification.classList.add('show');
+        
+        setTimeout(() => {
+          notification.classList.remove('show');
+        }, 3000);
+      }
+    });
+  </script>
+</body>
+</html>

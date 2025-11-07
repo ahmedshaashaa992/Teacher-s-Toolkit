@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Rechnung Generator - FUTURE-DRIVEN DEVELOPMENT</title>
+<style>
+/* --- General UI --- */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+body { background:#f5f5f5; color:#333; padding:20px; line-height:1.4; }
+.container { max-width:1200px; margin:0 auto; display:flex; flex-wrap:wrap; gap:30px; }
+header { width:100%; text-align:center; padding:20px 0; margin-bottom:20px; }
+h1 { color:#2c3e50; font-size:2.2rem; }
+.controls { flex:1; min-width:300px; background:#fff; padding:25px; box-shadow:0 0 10px rgba(0,0,0,.1); border-radius:6px; max-height:800px; overflow:auto; }
+.invoice-preview { flex:1; min-width:500px; background:#fff; padding:40px; box-shadow:0 0 10px rgba(0,0,0,.1); }
+
+/* --- A4 PDF wrapper: helps visual match to A4 when generating PDF --- */
+.pdf-wrap {
+    width: 210mm;
+    max-width: 100%;
+    margin: 0 auto;
+    overflow: hidden; /* prevents right side crop */
+    padding: 0 5mm 30mm 5mm; /* adds safe boundaries */
+}
+.invoice { margin: 0 auto; color:#333; /* avoid relying on body width */ }
+
+/* --- Logo --- */
+.logo-container { text-align:center; margin-bottom:20px; }
+.logo-preview { max-width:300px; max-height:120px; display:none; margin:0 auto; }
+.logo-placeholder { width:300px; height:100px; background:#f1c232; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px; color:#000; margin:0 auto; }
+
+/* --- Invoice layout --- */
+.invoice-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; }
+.sender-info { max-width:60%; }
+.invoice-meta { text-align:right; }
+.invoice-title { font-size:18px; font-weight:bold; text-decoration:underline; margin-bottom:10px; color:#000; }
+
+.invoice-table { width:100%; border-collapse:collapse; margin-bottom:20px; }
+.invoice-table th { text-align:left; padding:10px; background:#f3f3f3; color:#D4AF37; border-bottom:1px solid #b7b7b7; }
+.invoice-table td { padding:10px; border-bottom:1px solid #eee; }
+
+.invoice-total { text-align:right; font-weight:bold; margin-bottom:30px; }
+
+.invoice-footer { margin-top:20px; }
+
+/* --- Controls form fields --- */
+.form-group { margin-bottom:16px; }
+label { display:block; margin-bottom:6px; font-weight:bold; color:#2c3e50; }
+input, textarea, select { width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; font-size:1rem; }
+textarea { min-height:70px; resize:vertical; }
+
+/* --- Buttons --- */
+button { background:#2c3e50; color:#fff; border:none; padding:12px 16px; border-radius:6px; cursor:pointer; font-size:1rem; margin-top:10px; width:100%; }
+button:hover{ background:#1a252f; }
+.btn-green { background:#27ae60; }
+.btn-green:hover { background:#219653; }
+
+/* --- Print / PDF friendly adjustments --- */
+.invoice-table th, .invoice-table td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+@media print {
+  body * { visibility:hidden; }
+  .invoice-preview, .invoice-preview * { visibility:visible; }
+  .invoice-preview { position:absolute; left:0; top:0; width:100%; box-shadow:none; padding:20px; }
+  .controls { display:none; }
+}
+/* Fix PDF cut-off issue by adding padding at bottom */
+.pdf-wrap {
+    padding-bottom: 30mm; /* ensures entire footer fits in PDF */
+}
+.invoice-footer {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Rechnung Generator - FUTURE-DRIVEN DEVELOPMENT</h1>
+    <p>Professionelle Rechnungen mit Beispielvorlage</p>
+  </header>
+
+  <!-- Invoice Preview box (this is what we pass to html2pdf) -->
+  <div class="invoice-preview">
+    <div class="pdf-wrap" id="invoice-area">
+      <div class="invoice">
+
+        <div class="logo-container">
+          <div id="logo-preview-container">
+            <div class="logo-placeholder" id="text-logo">YOUR LOGO HERE</div>
+            <img id="logo-preview" class="logo-preview" alt="Logo preview">
+          </div>
+        </div>
+
+        <div class="invoice-header">
+          <div class="sender-info">
+            <div id="preview-sender-name"><strong>Example Company GmbH</strong></div>
+            <div id="preview-sender-address">Musterstraße 10</div>
+            <div id="preview-sender-city">12345 Berlin</div>
+            <div id="preview-sender-phone">+49 000 0000000</div>
+          </div>
+
+          <div class="invoice-meta">
+            <div><strong>Datum:</strong> <span id="preview-date">01.01.2025</span></div>
+            <div><strong>Steuernummer:</strong> <span id="preview-tax-number">DE00000000</span></div>
+            <div class="invoice-title" id="preview-invoice-number">Rech.Nr: 102025-001</div>
+          </div>
+        </div>
+
+        <div class="recipient-info" style="margin-bottom:12px;">
+          <div style="font-weight:bold;">An:</div>
+          <div id="preview-recipient-name">Client AG</div>
+          <div id="preview-recipient-address">Kundenweg 20</div>
+          <div id="preview-recipient-city">54321 Hamburg</div>
+        </div>
+
+        <div id="preview-description" style="margin-bottom:12px;">Dienstleistung Beispielvertrag</div>
+
+        <table class="invoice-table">
+          <thead>
+            <tr>
+              <th>Beschreibung</th>
+              <th style="text-align:center">Stunden</th>
+              <th style="text-align:center">Satz</th>
+              <th style="text-align:right">Betrag</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td id="preview-service-desc">IT Dienstleistung</td>
+              <td style="text-align:center" id="preview-hours">10</td>
+              <td style="text-align:center" id="preview-rate">€50,00</td>
+              <td style="text-align:right" id="preview-amount">€500,00</td>
+            </tr>
+            <tr>
+              <td id="preview-month">Jan.2025</td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td id="preview-extra-desc">Support Pauschale</td>
+              <td style="text-align:center" id="preview-extra-type">Pauschale</td>
+              <td style="text-align:center" id="preview-extra-rate">€100,00</td>
+              <td style="text-align:right" id="preview-extra-amount">€100,00</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="invoice-total">
+          Total: <strong id="preview-total">€600,00</strong>
+        </div>
+
+        <div class="invoice-footer">
+          <div><strong>Zahlungsempfänger:</strong> <span id="preview-payee">Example Company GmbH</span></div>
+          <div><strong>Bankverbindung:</strong> <span id="preview-bank">DE00 0000 0000 0000 0000 00</span></div>
+          <div style="margin-top:8px;"><strong>Hinweis:</strong> <span id="preview-note">gemäß § 19 UStG keine Umsatzsteuer</span></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls (not part of PDF) -->
+  <div class="controls">
+    <h2>Rechnung bearbeiten</h2>
+
+    <div class="form-group">
+      <label for="logo-upload">Logo hochladen:</label>
+      <input type="file" id="logo-upload" accept="image/*">
+    </div>
+
+    <div class="form-group">
+      <label for="invoice-date">Datum</label>
+      <input type="date" id="invoice-date" value="2025-01-01">
+    </div>
+
+    <div class="form-group">
+      <label for="invoice-number">Rechnungsnummer</label>
+      <input id="invoice-number" value="102025-001">
+    </div>
+
+    <div class="form-group">
+      <label for="tax-number">Steuernummer</label>
+      <input id="tax-number" value="DE00000000">
+    </div>
+
+    <hr>
+    <h3>Absender</h3>
+    <div class="form-group"><input id="sender-name" value="Example Company GmbH"></div>
+    <div class="form-group"><input id="sender-address" value="Musterstraße 10"></div>
+    <div class="form-group"><input id="sender-postcode" value="12345"></div>
+    <div class="form-group"><input id="sender-city" value="Berlin"></div>
+    <div class="form-group"><input id="sender-phone" value="+49 000 0000000"></div>
+
+    <hr>
+    <h3>Empfänger</h3>
+    <div class="form-group"><input id="recipient-name" value="Client AG"></div>
+    <div class="form-group"><input id="recipient-address" value="Kundenweg 20"></div>
+    <div class="form-group"><input id="recipient-postcode" value="54321"></div>
+    <div class="form-group"><input id="recipient-city" value="Hamburg"></div>
+
+    <hr>
+    <h3>Leistung</h3>
+    <div class="form-group"><input id="description" value="Dienstleistung Beispielvertrag"></div>
+    <div class="form-group"><input id="service-desc" value="IT Dienstleistung"></div>
+    <div class="form-group"><input type="number" id="hours" value="10" min="0" step="1"></div>
+    <div class="form-group"><input type="number" id="rate" value="50" min="0" step="0.01"></div>
+    <div class="form-group"><input id="month-display" value="Jan.2025"></div>
+    <div class="form-group"><input id="extra-desc" value="Support Pauschale"></div>
+    <div class="form-group"><input id="extra-type" value="Pauschale"></div>
+    <div class="form-group"><input type="number" id="extra-rate" value="100" min="0" step="0.01"></div>
+
+    <hr>
+    <h3>Zahlung</h3>
+    <div class="form-group"><input id="payee" value="Example Company GmbH"></div>
+    <div class="form-group"><textarea id="bank-details">DE00 0000 0000 0000 0000 00</textarea></div>
+    <div class="form-group"><textarea id="note">gemäß § 19 UStG keine Umsatzsteuer</textarea></div>
+
+    <button id="update-invoice">Vorschau aktualisieren</button>
+    <button id="download-pdf" class="btn-green">PDF herunterladen</button>
+    <button id="print-invoice" class="btn-green">Drucken</button>
+  </div>
+</div>
+
+<!-- html2pdf (cdn) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+/* -------------- Cache elements (safe access) -------------- */
+const els = {
+  invoiceArea: document.getElementById('invoice-area'),
+  // preview elements
+  previewDate: document.getElementById('preview-date'),
+  previewInvoiceNumber: document.getElementById('preview-invoice-number'),
+  previewTaxNumber: document.getElementById('preview-tax-number'),
+  previewSenderName: document.getElementById('preview-sender-name'),
+  previewSenderAddress: document.getElementById('preview-sender-address'),
+  previewSenderCity: document.getElementById('preview-sender-city'),
+  previewSenderPhone: document.getElementById('preview-sender-phone'),
+  previewRecipientName: document.getElementById('preview-recipient-name'),
+  previewRecipientAddress: document.getElementById('preview-recipient-address'),
+  previewRecipientCity: document.getElementById('preview-recipient-city'),
+  previewDescription: document.getElementById('preview-description'),
+  previewServiceDesc: document.getElementById('preview-service-desc'),
+  previewHours: document.getElementById('preview-hours'),
+  previewRate: document.getElementById('preview-rate'),
+  previewAmount: document.getElementById('preview-amount'),
+  previewMonth: document.getElementById('preview-month'),
+  previewExtraDesc: document.getElementById('preview-extra-desc'),
+  previewExtraType: document.getElementById('preview-extra-type'),
+  previewExtraRate: document.getElementById('preview-extra-rate'),
+  previewExtraAmount: document.getElementById('preview-extra-amount'),
+  previewTotal: document.getElementById('preview-total'),
+  previewPayee: document.getElementById('preview-payee'),
+  previewBank: document.getElementById('preview-bank'),
+  previewNote: document.getElementById('preview-note'),
+  logoPreviewImg: document.getElementById('logo-preview'),
+  textLogo: document.getElementById('text-logo'),
+  // inputs
+  invoiceDate: document.getElementById('invoice-date'),
+  invoiceNumber: document.getElementById('invoice-number'),
+  taxNumber: document.getElementById('tax-number'),
+  senderName: document.getElementById('sender-name'),
+  senderAddress: document.getElementById('sender-address'),
+  senderPostcode: document.getElementById('sender-postcode'),
+  senderCity: document.getElementById('sender-city'),
+  senderPhone: document.getElementById('sender-phone'),
+  recipientName: document.getElementById('recipient-name'),
+  recipientAddress: document.getElementById('recipient-address'),
+  recipientPostcode: document.getElementById('recipient-postcode'),
+  recipientCity: document.getElementById('recipient-city'),
+  description: document.getElementById('description'),
+  serviceDesc: document.getElementById('service-desc'),
+  hours: document.getElementById('hours'),
+  rate: document.getElementById('rate'),
+  monthDisplay: document.getElementById('month-display'),
+  extraDesc: document.getElementById('extra-desc'),
+  extraType: document.getElementById('extra-type'),
+  extraRate: document.getElementById('extra-rate'),
+  payee: document.getElementById('payee'),
+  bankDetails: document.getElementById('bank-details'),
+  note: document.getElementById('note'),
+  logoUpload: document.getElementById('logo-upload'),
+  updateBtn: document.getElementById('update-invoice'),
+  downloadPdfBtn: document.getElementById('download-pdf'),
+  printBtn: document.getElementById('print-invoice')
+};
+
+/* -------------- Utility formatting -------------- */
+function formatCurrency(v){
+  const n = parseFloat(v) || 0;
+  return '€' + n.toFixed(2).replace('.', ',');
+}
+function formatDate(v){
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d)) return v;
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yy = d.getFullYear();
+  return dd + '.' + mm + '.' + yy;
+}
+
+/* -------------- Update preview -------------- */
+function updatePreview(){
+  // date & meta
+  els.previewDate.textContent = formatDate(els.invoiceDate.value);
+  els.previewInvoiceNumber.textContent = 'Rech.Nr: ' + (els.invoiceNumber.value || '');
+  els.previewTaxNumber.textContent = els.taxNumber.value || '';
+
+  // sender
+  els.previewSenderName.textContent = els.senderName.value || '';
+  els.previewSenderAddress.textContent = els.senderAddress.value || '';
+  const sPost = els.senderPostcode ? els.senderPostcode.value : '';
+  els.previewSenderCity.textContent = (sPost ? sPost + ' ' : '') + (els.senderCity.value || '');
+  els.previewSenderPhone.textContent = els.senderPhone.value || '';
+
+  // recipient
+  els.previewRecipientName.textContent = els.recipientName.value || '';
+  els.previewRecipientAddress.textContent = els.recipientAddress.value || '';
+  const rPost = els.recipientPostcode ? els.recipientPostcode.value : '';
+  els.previewRecipientCity.textContent = (rPost ? rPost + ' ' : '') + (els.recipientCity.value || '');
+
+  // services & totals
+  const hoursVal = parseFloat(els.hours.value) || 0;
+  const rateVal = parseFloat(els.rate.value) || 0;
+  const extraVal = parseFloat(els.extraRate.value) || 0;
+  const serviceAmount = hoursVal * rateVal;
+  const total = serviceAmount + extraVal;
+
+  els.previewDescription.textContent = els.description.value || '';
+  els.previewServiceDesc.textContent = els.serviceDesc.value || '';
+  els.previewHours.textContent = hoursVal;
+  els.previewRate.textContent = formatCurrency(rateVal);
+  els.previewAmount.textContent = formatCurrency(serviceAmount);
+  els.previewMonth.textContent = els.monthDisplay.value || '';
+  els.previewExtraDesc.textContent = els.extraDesc.value || '';
+  els.previewExtraType.textContent = els.extraType.value || '';
+  els.previewExtraRate.textContent = formatCurrency(extraVal);
+  els.previewExtraAmount.textContent = formatCurrency(extraVal);
+  els.previewTotal.textContent = formatCurrency(total);
+
+  els.previewPayee.textContent = els.payee.value || '';
+  els.previewBank.textContent = els.bankDetails.value || '';
+  els.previewNote.textContent = els.note.value || '';
+}
+
+/* -------------- Wire inputs to update (live) -------------- */
+const watchedIds = [
+  'invoice-date','invoice-number','tax-number','sender-name','sender-address','sender-postcode','sender-city','sender-phone',
+  'recipient-name','recipient-address','recipient-postcode','recipient-city',
+  'description','service-desc','hours','rate','month-display','extra-desc','extra-type','extra-rate',
+  'payee','bank-details','note'
+];
+watchedIds.forEach(id=>{
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', updatePreview);
+});
+
+/* -------------- Logo upload (data URL so html2pdf includes it) -------------- */
+els.logoUpload.addEventListener('change', (ev)=>{
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    els.logoPreviewImg.src = e.target.result;
+    els.logoPreviewImg.style.display = 'block';
+    els.textLogo.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+});
+
+/* -------------- Update button -------------- */
+els.updateBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  updatePreview();
+});
+
+/* -------------- PDF export (improved options) -------------- */
+els.downloadPdfBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  updatePreview(); // ensure latest values in DOM
+
+  // html2pdf options tuned for A4, good resolution, and color-preservation
+  const opt = {
+        margin: [10, 1, 1, 1], // top, left, bottom, right in mm
+        filename: 'rechnung.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+            scale: 1.6,
+            useCORS: true,
+            allowTaint: true,
+            scrollX: 1,
+            scrollY: 0
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+  // We pass the invoice wrapper element (invoice-area)
+  html2pdf().set(opt).from(els.invoiceArea).save();
+});
+
+/* -------------- Print button -------------- */
+els.printBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  updatePreview();
+  window.print();
+});
+
+/* initialize preview */
+updatePreview();
+</script>
+</body>
+</html>
