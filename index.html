@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
+    <!-- Futuristic Background Elements -->
+    <div class="cyber-grid"></div>
+    <div class="floating-particles" id="particles"></div>
+    <div class="hologram-lines"></div>
+    <div class="scan-line"></div>
+    <div class="binary-rain" id="binaryRain"></div>
     <header>
         <div class="container">
             
@@ -106,8 +112,55 @@
     <footer>
         <div class="container">
             <p>&copy; 2025 Teacher's Toolkit. All rights reserved.</p>
-            <p>Designed with ❤️ for educators worldwide</p>
+            <p>Designed with <span class="neon-text">neural energy</span> for educators worldwide</p>
         </div>
     </footer>
+        <script>
+        // Create floating particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            particle.style.width = `${Math.random() * 10 + 5}px`;
+            particle.style.height = particle.style.width;
+            particle.style.left = `${Math.random() * 100}vw`;
+            particle.style.top = `${Math.random() * 100 + 100}vh`;
+            particle.style.animationDelay = `${Math.random() * 15}s`;
+            particle.style.animationDuration = `${Math.random() * 10 + 10}s`;
+            particlesContainer.appendChild(particle);
+        }
+
+        // Create binary rain
+        const binaryContainer = document.getElementById('binaryRain');
+        const characters = ['0', '1'];
+        for (let i = 0; i < 100; i++) {
+            const digit = document.createElement('div');
+            digit.classList.add('binary-digit');
+            digit.textContent = characters[Math.floor(Math.random() * characters.length)];
+            digit.style.left = `${Math.random() * 100}vw`;
+            digit.style.animationDelay = `${Math.random() * 10}s`;
+            digit.style.animationDuration = `${Math.random() * 5 + 5}s`;
+            digit.style.opacity = Math.random() * 0.5 + 0.1;
+            binaryContainer.appendChild(digit);
+        }
+
+        // Add interactive cursor effect
+        document.addEventListener('mousemove', (e) => {
+            const cursorGlow = document.createElement('div');
+            cursorGlow.classList.add('particle');
+            cursorGlow.style.width = '5px';
+            cursorGlow.style.height = '5px';
+            cursorGlow.style.left = `${e.clientX}px`;
+            cursorGlow.style.top = `${e.clientY}px`;
+            cursorGlow.style.animation = 'none';
+            cursorGlow.style.opacity = '0.7';
+            cursorGlow.style.background = 'var(--primary)';
+            document.body.appendChild(cursorGlow);
+            
+            setTimeout(() => {
+                cursorGlow.remove();
+            }, 1000);
+        });
+    </script>
 </body>
 </html>
